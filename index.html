@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Lymphoma Lit Watch</title>
+  <style>
+    :root {
+      --bg: #f8fafc;
+      --card-bg: #ffffff;
+      --text: #0f172a;
+      --muted: #64748b;
+      --primary: #0284c7;
+      --border: #e2e8f0;
+    }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      margin: 0;
+      padding: 2rem 1rem;
+    }
+    .container {
+      max-width: 1000px;
+      margin: 0 auto;
+    }
+    header {
+      margin-bottom: 2rem;
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 1rem;
+    }
+    h1 {
+      margin: 0 0 0.5rem 0;
+      font-size: 2rem;
+    }
+    .subtitle {
+      color: var(--muted);
+      font-size: 0.95rem;
+    }
+    .controls {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.75rem;
+      margin-bottom: 1.5rem;
+    }
+    input, select {
+      padding: 0.6rem 0.8rem;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      font-size: 0.9rem;
+      outline: none;
+    }
+    input[type="search"] {
+      flex: 1;
+      min-width: 200px;
+    }
+    .paper-card {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 1.25rem;
+      margin-bottom: 1rem;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+    }
+    .badge {
+      display: inline-block;
+      padding: 0.2rem 0.5rem;
+      border-radius: 4px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      background: #e0f2fe;
+      color: #0369a1;
+      margin-bottom: 0.5rem;
+    }
+    .paper-title {
+      font-size: 1.1rem;
+      font-weight: 600;
+      margin: 0 0 0.5rem 0;
+      line-height: 1.4;
+    }
+    .paper-meta {
+      font-size: 0.85rem;
+      color: var(--muted);
+      margin-bottom: 0.75rem;
+    }
+    .summary-section {
+      background: #f1f5f9;
+      padding: 0.75rem;
+      border-radius: 6px;
+      font-size: 0.9rem;
+      margin-top: 0.75rem;
+    }
+    .summary-section ul {
+      margin: 0.4rem 0;
+      padding-left: 1.2rem;
+    }
+    a.source-btn {
+      display: inline-block;
+      margin-top: 0.75rem;
+      color: var(--primary);
+      text-decoration: none;
+      font-size: 0.85rem;
+      font-weight: 600;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>Lymphoma Lit Watch</h1>
+      <p class="subtitle">NEJM · Lancet · Nature Med · Blood · JCO · Ann Oncol · BJH · Haematologica</p>
+    </header>
+
+    <div class="controls">
+      <input type="search" id="search" placeholder="Search keywords..." oninput="render()">
+      <select id="categoryFilter" onchange="render()">
+        <option value="All">All Categories</option>
+        <option value="Aggressive B-cell">Aggressive B-cell</option>
+        <option value="Indolent B-cell">Indolent B-cell</option>
+        <option value="T-cell / NK-cell">T-cell / NK-cell</option>
+        <option value="Other Lymphoma">Other Lymphoma</option>
+      </select>
+    </div>
+
+    <div id="paperList">Loading literature database...</div>
+  </div>
+
+  <script>
+    let papers = [];
+
+    async function loadData() {
+      try {
+        const res = await fetch('data/papers.json');
+        papers = await res.json();
+        render();
+      } catch (err) {
+        document.getElementById('paperList').innerText = "Failed to load papers.";
+      }
+    }
+
+    function render() {
+      const query = document.getElementById('search').value.toLowerCase();
+      const cat = document.getElementById('categoryFilter').value;
+
+      const filtered = papers.filter(p => {
+        const matchesCat = cat === 'All' || p.category === cat;
+        const matchesSearch = p.title.toLowerCase().includes(query) || 
+                              (p.abstract && p.abstract.toLowerCase().includes(query));
+        return matchesCat && matchesSearch;
+      });
+
+      const listElem = document.getElementById('paperList');
+      if (filtered.length === 0) {
+        listElem.innerHTML = "<p>No articles match your criteria.</p>";
+        return;
+      }
+
+      listElem.innerHTML = filtered.map(p => `
+        <div class="paper-card">
+          <span class="badge">${p.category || 'Lymphoma'}</span>
+          <h2 class="paper-title">${p.title}</h2>
+          <div class="paper-meta">
+            <strong>${p.journal}</strong> · Published: ${p.pub_date}
+          </div>
+          <div class="summary-section">
+            <p><strong>Objective:</strong> ${p.objective || 'N/A'}</p>
+            <p><strong>Key Findings:</strong></p>
+            <ul>
+              ${(p.findings || []).map(f => `<li>${f}</li>`).join('')}
+            </ul>
+            <p><strong>Clinical Takeaway:</strong> ${p.takeaway || 'N/A'}</p>
+          </div>
+          <a href="${p.url}" target="_blank" rel="noopener" class="source-btn">Read on PubMed →</a>
+        </div>
+      `).join('');
+    }
+
+    loadData();
+  </script>
+</body>
+</html>
